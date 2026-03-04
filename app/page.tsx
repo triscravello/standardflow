@@ -18,7 +18,7 @@ export default function Home() {
 
         <div className="mt-10 flex justify-center gap-4">
           <Link
-            href="/weekly-plans"
+            href="/planner/week"
             className="rounded-full bg-black px-6 py-3 text-white font-medium hover:bg-zinc-800 transition dark:bg-white dark:text-black dark:hover:bg-zinc-200"
           >
             Go to Weekly Plans

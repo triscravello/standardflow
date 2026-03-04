@@ -11,7 +11,7 @@ const navLinks = [
   { name: "Units", href: "/units" },
   { name: "Lessons", href: "/lessons" },
   { name: "Standards", href: "/standards" },
-  { name: "Weekly Plans", href: "/weekly-plans" },
+  { name: "Weekly Plans", href: "/planner/week" },
 ];
 
 export default function Navbar() {
