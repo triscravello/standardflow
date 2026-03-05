@@ -1,33 +1,44 @@
-// /app/api/planner/entry/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { getPlannerEntryById } from "@/services/plannerService";
 import { unauthorized, badRequest, forbidden, internalServerError } from "@/utils/apiErrors";
 
+// Sanitize a single planner entry
+function sanitizeEntry(entry: any) {
+  return {
+    _id: entry._id.toString(),
+    lesson: {
+      _id: entry.lesson._id.toString(),
+      title: entry.lesson.title,
+    },
+    date: entry.date.toISOString(),
+    user: entry.user?.toString(),
+    createdAt: entry.createdAt?.toISOString(),
+    updatedAt: entry.updatedAt?.toISOString(),
+  };
+}
+
 export async function GET(
-    req: NextRequest, 
-    { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-    try{
-        // Authenticate the user
-        const user = await requireAuth(req);
-        if (!user) return unauthorized();
+  try {
+    // Authenticate
+    const user = await requireAuth(req);
+    if (!user) return unauthorized();
 
-        // Authorize based on role
-        requireRole(user, ['admin', 'teacher']);
+    // Authorize
+    requireRole(user, ["admin", "teacher"]);
 
-        const entryId = params.id;
+    const entryId = params.id;
+    if (!entryId) return badRequest("Missing entry id");
 
-        if (!entryId) {
-            return badRequest('Missing entry id');
-        }
+    const plannerEntry = await getPlannerEntryById(entryId);
+    if (!plannerEntry) return badRequest("Planner entry not found");
 
-        const plannerEntry = await getPlannerEntryById(entryId);
-        return NextResponse.json(plannerEntry);
-    } catch (error) {
-        if (error instanceof Error && error.message === "FORBIDDEN") {
-            return forbidden();
-        }
-        return internalServerError();
-    }
+    return NextResponse.json(sanitizeEntry(plannerEntry));
+  } catch (error: any) {
+    if (error.message === "FORBIDDEN") return forbidden();
+    return internalServerError();
+  }
 }

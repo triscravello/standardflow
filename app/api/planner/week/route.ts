@@ -1,125 +1,139 @@
-// /app/api/planner/week/route.ts
-import { NextResponse, NextRequest } from "next/server";
-import { removePlannerEntry, reschedulePlannerEntry, addPlannerEntry, getPlannerEntriesForWeek } from "@/services/plannerService";
+import { NextRequest, NextResponse } from "next/server";
+import { addPlannerEntry, removePlannerEntry, reschedulePlannerEntry, getPlannerEntriesForWeek } from "@/services/plannerService";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { unauthorized, forbidden, badRequest, internalServerError } from "@/utils/apiErrors";
+import { connectDB } from "@/lib/mongodb";
 
+// Auth helper
 async function authTeacherOrAdmin(req: NextRequest) {
-    const user = await requireAuth(req);
-    if (!user) throw new Error("UNAUTHORIZED");
-    requireRole(user, ['admin', 'teacher']);
-    return user;
+  const user = await requireAuth(req);
+  if (!user) throw new Error("UNAUTHORIZED");
+  requireRole(user, ["admin", "teacher"]);
+  return user;
 }
 
+// Convert Mongoose entry to client-safe object
+function sanitizeEntry(entry: any) {
+  return {
+    _id: entry._id.toString(),
+    lesson: {
+      _id: entry.lesson._id.toString(),
+      title: entry.lesson.title,
+    },
+    date: entry.date.toISOString(),
+    user: entry.user?.toString(),
+    createdAt: entry.createdAt?.toISOString(),
+    updatedAt: entry.updatedAt?.toISOString(),
+  };
+}
+
+// GET /api/planner/week?startDate=...&endDate=...
 export async function GET(req: NextRequest) {
-    try{ 
-        // Check auth + role
-        const user = await authTeacherOrAdmin(req);
+  try {
+    const user = await authTeacherOrAdmin(req);
 
-        // Parse query params
-        const url = new URL(req.url);
-        const startDateParam = url.searchParams.get('startDate');
-        const endDateParam = url.searchParams.get('endDate');
+    const url = new URL(req.url);
+    const startDateParam = url.searchParams.get("startDate");
+    const endDateParam = url.searchParams.get("endDate");
+    if (!startDateParam || !endDateParam) return badRequest("Missing startDate or endDate");
 
-        if (!startDateParam || !endDateParam) {
-            return badRequest('Missing startDate or endDate query parameters');
-        }
+    const startDate = new Date(startDateParam);
+    const endDate = new Date(endDateParam);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return badRequest("Invalid startDate or endDate");
 
-        const startDate = new Date(startDateParam);
-        const endDate = new Date(endDateParam);
+    await connectDB();
+    const weeklyPlans = await getPlannerEntriesForWeek(user.id, startDate, endDate);
 
-        // Check for invalid dates
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            return badRequest("Invalid startDate or endDate");
-        } 
-
-        const weeklyPlans = await getPlannerEntriesForWeek(user.id, startDate, endDate);
-        return NextResponse.json(weeklyPlans);
-    } catch (error) {
-        if (error instanceof Error) {
-            switch(error.message) {
-                case "FORBIDDEN": return forbidden();
-                case "UNAUTHORIZED": return unauthorized();
-                default: return internalServerError();
-            }
-        }
+    return NextResponse.json({ entries: weeklyPlans.map(sanitizeEntry) });
+  } catch (error: any) {
+    switch (error.message) {
+      case "FORBIDDEN":
+        return forbidden();
+      case "UNAUTHORIZED":
+        return unauthorized();
+      default:
+        return internalServerError();
     }
+  }
 }
 
-export async function DELETE(req: NextRequest) {
-    try {
-        // Authenticate the user
-        const user = await authTeacherOrAdmin(req);
-
-        const url = new URL(req.url);
-        const lessonId = url.searchParams.get('lessonId');
-
-        if (!lessonId) {
-            return badRequest('Missing lessonId query parameter');
-        }
-    
-        await removePlannerEntry(lessonId);
-        return NextResponse.json({ message: 'Scheduled lesson canceled successfully' });
-    } catch (error) {
-        if (error instanceof Error) {
-            switch(error.message) {
-                case "FORBIDDEN": return forbidden();
-                case "UNAUTHORIZED": return unauthorized();
-                default: return internalServerError();
-            }
-        }
-    }
-}
-
-export async function PUT(req: NextRequest) {
-    try {
-        const user = await authTeacherOrAdmin(req);
-
-        const { entryId, newDate } = await req.json();
-
-        if (!entryId || !newDate) {
-            return badRequest('Missing entryId or newDate in request body');
-        }
-
-        // Check for invalid dates
-        const newDateObj = new Date(newDate);
-        if (isNaN(newDateObj.getTime())) return badRequest('Invalid newDate');
-    
-        const rescheduledEntry = await reschedulePlannerEntry(entryId, new Date(newDate));
-        return NextResponse.json(rescheduledEntry);
-    } catch (error) {
-        if (error instanceof Error) {
-            switch(error.message) {
-                case "FORBIDDEN": return forbidden();
-                case "UNAUTHORIZED": return unauthorized();
-                default: return internalServerError();
-            }
-        }
-    }
-}
-
+// POST /api/planner/week
+// body: { lessonTitle, date }
 export async function POST(req: NextRequest) {
-    try{
-        const user = await authTeacherOrAdmin(req);
-    
-        const { lessonId, date } = await req.json();
+  try {
+    const user = await authTeacherOrAdmin(req);
 
-        if (!lessonId || !date) {
-            return badRequest('Missing lessonId or date in request body');
-        }
+    const { lessonTitle, date } = await req.json();
+    if (!lessonTitle || !date) return badRequest("Missing lessonTitle or date");
 
-        const lessonDate = new Date(date);
-        if (isNaN(lessonDate.getTime())) return badRequest('Invalid lesson date');
-    
-        const plannerEntry = await addPlannerEntry(user.id, lessonId, lessonDate);
-        return NextResponse.json(plannerEntry);
-    } catch (error) {
-        if (error instanceof Error) {
-            switch(error.message) {
-                case "FORBIDDEN": return forbidden();
-                case "UNAUTHORIZED": return unauthorized();
-                default: return internalServerError();
-            }
-        }
+    const lessonDate = new Date(date);
+    if (isNaN(lessonDate.getTime())) return badRequest("Invalid date");
+
+    await connectDB();
+    const plannerEntry = await addPlannerEntry(user.id, lessonTitle, lessonDate);
+
+    return NextResponse.json(sanitizeEntry(plannerEntry));
+  } catch (error: any) {
+    switch (error.message) {
+      case "FORBIDDEN":
+        return forbidden();
+      case "UNAUTHORIZED":
+        return unauthorized();
+      default:
+        return internalServerError();
     }
+  }
+}
+
+// DELETE /api/planner/week?entryId=...
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await authTeacherOrAdmin(req);
+
+    const url = new URL(req.url);
+    const entryId = url.searchParams.get("entryId");
+    if (!entryId) return badRequest("Missing entryId");
+
+    await connectDB();
+    await removePlannerEntry(entryId);
+
+    return NextResponse.json({ message: "Entry deleted successfully" });
+  } catch (error: any) {
+    switch (error.message) {
+      case "FORBIDDEN":
+        return forbidden();
+      case "UNAUTHORIZED":
+        return unauthorized();
+      default:
+        return internalServerError();
+    }
+  }
+}
+
+// PUT /api/planner/week
+// body: { entryId, newDate }
+export async function PUT(req: NextRequest) {
+  try {
+    const user = await authTeacherOrAdmin(req);
+
+    const { entryId, newDate } = await req.json();
+    if (!entryId || !newDate) return badRequest("Missing entryId or newDate");
+
+    const dateObj = new Date(newDate);
+    if (isNaN(dateObj.getTime())) return badRequest("Invalid newDate");
+
+    await connectDB();
+    const updatedEntry = await reschedulePlannerEntry(entryId, dateObj);
+
+    return NextResponse.json(sanitizeEntry(updatedEntry));
+  } catch (error: any) {
+    switch (error.message) {
+      case "FORBIDDEN":
+        return forbidden();
+      case "UNAUTHORIZED":
+        return unauthorized();
+      default:
+        return internalServerError();
+    }
+  }
 }
