@@ -1,23 +1,11 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import React, { useEffect, useState, useMemo } from "react";
+import { format } from "date-fns";
 import DayColumn from "./DayColumn";
-
-interface Lesson {
-  _id: string;
-  title: string;
-}
-
-interface PlannerEntry {
-  _id: string;
-  lesson: Lesson;
-  date: string;
-  user?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-const USER_ID = "USER_ID_HERE";
+import {
+  plannerService,
+  PlannerEntryDTO,
+} from "@/services/plannerClientService";
 
 const daysOfWeek = [
   "Monday",
@@ -29,89 +17,91 @@ const daysOfWeek = [
   "Sunday",
 ];
 
-export default function WeeklyPlanner() {
-  const [planner, setPlanner] = useState<Record<string, PlannerEntry[]>>({});
-  const [loading, setLoading] = useState(true);
+function toPlannerByDay(entries: PlannerEntryDTO[]) {
+  const grouped: Record<string, PlannerEntryDTO[]> = {};
 
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  for (const day of daysOfWeek) {
+    grouped[day] = [];
+  }
 
-  // Fetch planner entries from API
+  for (const entry of entries) {
+    const dayName = format(new Date(entry.date), "EEEE");
+    if (grouped[dayName]) {
+      grouped[dayName].push(entry);
+    }
+  }
+
+  return grouped;
+}
+
+export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?: PlannerEntryDTO[] }) {
+  const [planner, setPlanner] = useState<Record<string, PlannerEntryDTO[]>>(
+    toPlannerByDay(initialEntries)
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const hasPlannerEntries = useMemo(
+    () => Object.values(planner).some(entries => entries.length > 0),
+    [planner]
+  );
+
   useEffect(() => {
     async function fetchPlanner() {
       try {
-        const res = await fetch(
-          `/api/planner/week?startDate=${weekStart.toISOString()}&endDate=${weekEnd.toISOString()}`
-        );
-        const data = await res.json();
-
-        const grouped: Record<string, PlannerEntry[]> = {};
-        data.entries.forEach((entry: PlannerEntry) => {
-          const dayName = format(new Date(entry.date), "EEEE");
-          if (!grouped[dayName]) grouped[dayName] = [];
-          grouped[dayName].push(entry);
-        });
-
-        setPlanner(grouped);
-      } catch (err) {
-        console.error("Failed to fetch planner:", err);
+        const entries = await plannerService.user();
+        setPlanner(toPlannerByDay(entries));
+      } catch (error) {
+        console.error("Error fetching planner user entries:", error);
       } finally {
-        setLoading(false);
+        setIsSyncing(false);
       }
     }
 
     fetchPlanner();
-  }, [weekStart, weekEnd]);
+  }, []);
 
-  // Add a lesson
   const addTask = async (day: string) => {
     const lessonTitle = prompt(`Add lesson for ${day}`);
     if (!lessonTitle) return;
 
-    const date = new Date(weekStart);
-    const dayIndex = daysOfWeek.indexOf(day);
-    date.setDate(date.getDate() + dayIndex);
+    const optimisticEntry: PlannerEntryDTO = {
+      _id: `temp-${Date.now()}`,
+      lesson: {
+        _id: "tmp-lesson",
+        title: lessonTitle,
+      },
+      date: new Date().toISOString(),
+    };
 
-    try {
-      const res = await fetch("/api/planner/entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: USER_ID, lessonTitle, date }),
-      });
-      const newEntry: PlannerEntry = await res.json();
-
-      setPlanner(prev => ({
-        ...prev,
-        [day]: [...(prev[day] || []), newEntry],
-      }));
-    } catch (err) {
-      console.error("Failed to add entry:", err);
-    }
+    setPlanner(prev => ({
+      ...prev,
+      [day]: [...(prev[day] || []), optimisticEntry],
+    }));
   };
 
-  // Delete a lesson
   const deleteEntry = async (entryId: string) => {
-    try {
-      await fetch(`/api/planner/week?lessonId=${entryId}`, { method: "DELETE" });
-
-      const updated: Record<string, PlannerEntry[]> = {};
+    setPlanner(prev => {
+      const next: Record<string, PlannerEntryDTO[]> = {};
       for (const day of daysOfWeek) {
-        updated[day] = (planner[day] || []).filter(e => e._id !== entryId);
+        next[day] = prev[day].filter(entry => entry._id !== entryId);
       }
-      setPlanner(updated);
-    } catch (err) {
-      console.error("Failed to delete entry:", err);
-    }
+      return next;
+    });
   };
-
-  if (loading) return <div className="text-center mt-20">Loading planner...</div>;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="max-w-7xl mx-auto py-16 px-4">
-        <h1 className="text-4xl font-bold text-center mb-10 text-black dark:text-white">
+        <h1 className="text-4xl font-bold text-center mb-2 text-black dark:text-white">
           Weekly Planner
         </h1>
+        <p className="text-center text-zinc-500 dark:text-zinc-400 mb-10">
+          {isSyncing
+            ? "Syncing planner entries..."
+            : hasPlannerEntries
+              ? "Drag and drop lessons to organize your week!"
+              : "No planner entries yet this week."}
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6">
           {daysOfWeek.map(day => (

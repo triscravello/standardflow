@@ -1,24 +1,11 @@
 "use client";
 import React from "react";
 import LessonDraggable from "./LessonDraggable";
-
-interface Lesson {
-  _id: string;
-  title: string;
-}
-
-interface PlannerEntry {
-  _id: string;
-  lesson: Lesson;
-  date: string;
-  user?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { PlannerEntryDTO } from "@/services/plannerClientService";
 
 interface DayColumnProps {
   day: string;
-  entries: PlannerEntry[];
+  entries: PlannerEntryDTO[];
   onAddTask: (day: string) => void;
   onDeleteEntry: (entryId: string) => void;
 }
