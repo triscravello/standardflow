@@ -44,6 +44,14 @@ export async function getLessonById(userId: string, lessonId: string): Promise<I
     }
 }
 
+export async function getLessonByUser(userId: string): Promise<ILesson[]> {
+    try {
+        return await Lesson.find({ createdBy: userId }).sort({ createdAt: -1 })
+    } catch (error) {
+        throw new Error('Error retrieving lessons: ' + error);
+    }
+}
+
 export async function scheduleLessonForUser(
     userId: string,
     lessonId: string,
@@ -65,8 +73,8 @@ export async function scheduleLessonForUser(
             lesson: new Types.ObjectId(lessonId),
             date,
         });
-    } catch (error: any) {
-        if (error?.code === 11000) {
+    } catch (error: unknown) {
+        if (typeof error === "object" && error !== null && "code" in error && (error as { code?: number }).code === 11000) {
             throw new Error('Lesson already scheduled for this date');
         }
         throw error;

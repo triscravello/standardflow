@@ -1,11 +1,12 @@
 // /app/api/lessons/route.ts
 import { NextResponse, NextRequest } from "next/server";
-import { createLesson, getScheduledLessonsForUser } from "@/services/lessonService";
+import { createLesson, getLessonByUser, getScheduledLessonsForUser } from "@/services/lessonService";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { unauthorized, forbidden, internalServerError, badRequest } from "@/utils/apiErrors";
 
 export async function POST(req: NextRequest) {
     try {
+        console.log("Fetching lessons...");
         // Authenticate the user
         const user = await requireAuth(req);
         if (!user) return unauthorized();
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest) {
         const newLesson = await createLesson(user.id, data);
         return NextResponse.json(newLesson, { status: 201 });
     } catch (error) {
+        console.error("POST /api/lessons error:", error);
         if (error instanceof Error && error.message === "FORBIDDEN") {
             return forbidden();
         }
@@ -25,6 +27,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
+        console.log("Fetching lessons...");
         // Authenticate the user
         const user = await requireAuth(req);
         if (!user) return unauthorized();
@@ -35,6 +38,11 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const start = searchParams.get("start");
         const end = searchParams.get("end");
+
+        if (!start && !end) {
+            const lessons = await getLessonByUser(user.id);
+            return NextResponse.json(lessons);
+        }
 
         if (!start || !end) {
             return badRequest("start and end query parameters are required");
@@ -50,6 +58,7 @@ export async function GET(req: NextRequest) {
         const scheduledLessons = await getScheduledLessonsForUser(user.id, startDate, endDate);
         return NextResponse.json(scheduledLessons);
     } catch (error) {
+        console.error("GET /api/lessons error:", error);
         if (error instanceof Error && error.message === "FORBIDDEN") {
             return forbidden();
         }
