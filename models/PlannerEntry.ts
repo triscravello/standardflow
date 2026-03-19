@@ -1,5 +1,5 @@
 // models/PlannerEntry.ts
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, models, model } from "mongoose";
 
 // Interface for a PlannerEntry document
 export interface IPlannerEntry extends Document {
@@ -36,6 +36,6 @@ plannerEntrySchema.index(
   { unique: true }
 );
 
-const PlannerEntry = mongoose.model<IPlannerEntry>("PlannerEntry", plannerEntrySchema);
+const PlannerEntry = (models.PlannerEntry as mongoose.Model<IPlannerEntry>) || model<IPlannerEntry>("PlannerEntry", plannerEntrySchema);
 
 export default PlannerEntry;

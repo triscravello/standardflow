@@ -1,5 +1,5 @@
 // models/Lesson.ts
-import mongoose, { Schema, Document, Model, trusted } from "mongoose";
+import mongoose, { Schema, models, model } from "mongoose";
 
 // Interface for a Lesson document
 export interface ILesson extends mongoose.Document {
@@ -45,6 +45,6 @@ const lessonSchema = new Schema<ILesson>(
 // Helpful index
 lessonSchema.index({ standard: 1 });
 
-const Lesson = mongoose.model<ILesson>("Lesson", lessonSchema);
+const Lesson = (models.Lesson as mongoose.Model<ILesson>) || model<ILesson>("Lesson", lessonSchema);
 
 export default Lesson;
