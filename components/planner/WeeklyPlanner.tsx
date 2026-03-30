@@ -1,11 +1,14 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { FormEvent, useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import DayColumn from "./DayColumn";
 import {
   plannerService,
   PlannerEntryDTO,
 } from "@/services/plannerClientService";
+import Modal from "../common/Modal";
+import Button from "../common/Button";
+import LoadingSpinner from "../common/LoadingSpinner";
 
 const daysOfWeek = [
   "Monday",
@@ -38,10 +41,13 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
   const [planner, setPlanner] = useState<Record<string, PlannerEntryDTO[]>>(
     toPlannerByDay(initialEntries)
   );
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [newLessonTitle, setNewLessonTitle] = useState("");
 
   const hasPlannerEntries = useMemo(
-    () => Object.values(planner).some(entries => entries.length > 0),
+    () => Object.values(planner).some((entries) => entries.length > 0),
     [planner]
   );
 
@@ -57,45 +63,57 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
       }
     }
 
-    fetchPlanner();
+    void fetchPlanner();
   }, []);
 
-  const addTask = async (day: string) => {
-    const lessonTitle = prompt(`Add lesson for ${day}`);
-    if (!lessonTitle) return;
+  const openAddTaskModal = (day: string) => {
+    setSelectedDay(day);
+    setNewLessonTitle("");
+    setIsAddModalOpen(true);
+  };
+
+  const addTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedDay || !newLessonTitle.trim()) {
+      return;
+    }
 
     const optimisticEntry: PlannerEntryDTO = {
       _id: `temp-${Date.now()}`,
       lesson: {
         _id: "tmp-lesson",
-        title: lessonTitle,
+        title: newLessonTitle.trim(),
       },
       date: new Date().toISOString(),
     };
 
-    setPlanner(prev => ({
+    setPlanner((prev) => ({
       ...prev,
-      [day]: [...(prev[day] || []), optimisticEntry],
+      [selectedDay]: [...(prev[selectedDay] || []), optimisticEntry],
     }));
+
+    setIsAddModalOpen(false);
+    setNewLessonTitle("");
   };
 
   const deleteEntry = async (entryId: string) => {
-    setPlanner(prev => {
+    setPlanner((prev) => {
       const next: Record<string, PlannerEntryDTO[]> = {};
       for (const day of daysOfWeek) {
-        next[day] = prev[day].filter(entry => entry._id !== entryId);
+        next[day] = prev[day].filter((entry) => entry._id !== entryId);
       }
       return next;
     });
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <div className="max-w-7xl mx-auto py-16 px-4">
-        <h1 className="text-4xl font-bold text-center mb-2 text-black dark:text-white">
+    <div className="planner-page">
+      <div className="planner-container">
+        <h1 className="planner-title">
           Weekly Planner
         </h1>
-        <p className="text-center text-zinc-500 dark:text-zinc-400 mb-10">
+        <p className="planner-subtitle">
           {isSyncing
             ? "Syncing planner entries..."
             : hasPlannerEntries
@@ -103,18 +121,53 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
               : "No planner entries yet this week."}
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6">
-          {daysOfWeek.map(day => (
-            <DayColumn
-              key={day}
-              day={day}
-              entries={planner[day] || []}
-              onAddTask={addTask}
-              onDeleteEntry={deleteEntry}
-            />
-          ))}
-        </div>
+        {isSyncing ? (
+          <div className="flex justify-center py-6">
+            <LoadingSpinner label="Syncing planner entries..." />
+          </div>
+        ) : (
+          <div className="planner-grid">
+            {daysOfWeek.map((day) => (
+              <DayColumn
+                key={day}
+                day={day}
+                entries={planner[day] || []}
+                onAddTask={openAddTaskModal}
+                onDeleteEntry={deleteEntry}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      <Modal
+        isOpen={isAddModalOpen}
+        title={selectedDay ? `Add Lesson to ${selectedDay}` : "Add Lesson"}
+        onClose={() => setIsAddModalOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="add-lesson-form" disabled={!newLessonTitle.trim()}>
+              Save Lesson
+            </Button>
+          </>
+        }
+      >
+        <form id="add-planner-lesson-form" onSubmit={addTask} className="space-y-2">
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200" htmlFor="lesson-title">
+            Lesson title
+          </label>
+          <input
+            id="planner-lesson-title"
+            value={newLessonTitle}
+            onChange={(event) => setNewLessonTitle(event.target.value)}
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            placeholder="Ex: Intro to Fractions"
+          />
+        </form>
+      </Modal>
     </div>
   );
 }
