@@ -3,6 +3,7 @@
 
 import { FormEvent, useState } from "react";
 import type { LessonDTO } from "@/services/lessonClientService";
+import Button from "../common/Button";
 
 interface AddLessonFormProps {
     onAddLesson: (lesson: Omit<LessonDTO, '_id'>) => Promise<void>;
@@ -31,10 +32,10 @@ export default function AddLessonForm({ onAddLesson }: AddLessonFormProps) {
             .filter(Boolean);
 
         const materialItems = materials
-            .split('')
+            .split(',')
             .map((item) => item.trim())
-            .filter(Boolean)
-        
+            .filter(Boolean);
+
         setIsSubmitting(true);
         try {
             await onAddLesson({
@@ -81,7 +82,7 @@ export default function AddLessonForm({ onAddLesson }: AddLessonFormProps) {
                 </label>
 
                 <label className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
-                    <span>Objectives</span>
+                    <span>Objectives (comma-separated)</span>
                     <input
                         value={objectives}
                         onChange={(event) => setObjectives(event.target.value)}
@@ -91,25 +92,21 @@ export default function AddLessonForm({ onAddLesson }: AddLessonFormProps) {
                 </label>
 
                 <label className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
-                    <span>Matierals (comma-separated)</span>
+                    <span>Materials (comma-separated)</span>
                     <input
                         value={materials}
                         onChange={(event) => setMaterials(event.target.value)}
-                        placeholder="Fractions strips, worksheet"
+                        placeholder="Fraction strips, worksheet"
                         className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                     />
                 </label>
-
-                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-                <button 
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="rounded-mg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-                >
-                    {isSubmitting ? 'Adding...' : 'Add Lesson'}
-                </button>
             </div>
+
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+            <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Adding...' : 'Add Lesson'}
+            </Button>
         </form>
     )
 }

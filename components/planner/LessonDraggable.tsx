@@ -2,6 +2,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { PlannerEntryDTO } from "@/services/plannerClientService";
+import Button from "../common/Button";
 
 interface LessonDraggableProps {
   entry: PlannerEntryDTO;
@@ -17,12 +18,14 @@ export default function LessonDraggable({ entry, onDelete }: LessonDraggableProp
           {format(new Date(entry.date), "MMM d")}
         </p>
       </div>
-      <button 
-        className="text-red-500 text-sm"
+      <Button
+        size="sm"
+        className="text-red-500 hover:text-red-600"
         onClick={() => onDelete(entry._id)}
+        variant="ghost"
       >
         Delete
-      </button>
+      </Button>
     </div>
   );
 }

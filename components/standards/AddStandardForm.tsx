@@ -1,8 +1,8 @@
-// /components/standards/AddStandardForm.tsx
 'use client';
 
 import { FormEvent, useState } from "react";
 import type { StandardDTO } from "@/services/standardClientService";
+import Button from "../common/Button";
 
 interface AddStandardFormProps {
     onAddStandard: (standard: Omit<StandardDTO, '_id'>) => Promise<void>;
@@ -96,13 +96,9 @@ export default function AddStandardForm({ onAddStandard }: AddStandardFormProps)
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-            <button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-600 dark:hover:bg-zinc-300"
-            >
+            <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Adding...' : 'Add Standard'}
-            </button>
+            </Button>
         </form>
     );
 }
