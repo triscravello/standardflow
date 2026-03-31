@@ -74,7 +74,13 @@ models/
 ├── 📁 app
 │ ├── 📁 api
 │ │ ├── 📁 auth
+│ │ │ ├── 📁 login
+│ │ │ │ ├── 🟨 route.ts
+│ │ │ ├── 📁 logout
+│ │ │ │ ├── 🟨 route.ts
 │ │ │ ├── 🟨 route.ts
+│ │ │ ├── 📁 signup
+│ │ │ │ ├── 🟨 route.ts
 │ │ ├── 📁 lessons
 │ │ │ ├── 📁 [id]
 │ │ │ │ ├── 🟨 route.ts
@@ -112,12 +118,14 @@ models/
 │ ├── 📁 lessons
 │ │ ├── 📁 [id]
 │ │ │ ├── 🟦 page.tsx
+│ │ ├── 🟦 page.tsx
 │ ├── 📁 login
 │ │ ├── 🟦 page.tsx
 │ ├── 🟦 page.tsx
 │ ├── 📁 planner
 │ │ ├── 📁 week
 │ │ │ ├── 🟦 page.tsx
+│ ├── 🟦 providers.tsx
 │ ├── 📁 signup
 │ │ ├── 🟦 page.tsx
 │ ├── 📁 standards
@@ -156,6 +164,8 @@ models/
 │ │ ├── 🟦 UnitCard.tsx
 │ │ ├── 🟦 UnitLessonManager.tsx
 │ │ ├── 🟦 UnitList.tsx
+├── 📁 context
+│ ├── 🟦 AuthContext.tsx
 ├── 📄 eslint.config.mjs
 ├── 🟨 global.d.ts
 ├── 📁 lib
@@ -186,9 +196,13 @@ models/
 │ ├── 🟨 authService.edge.ts
 │ ├── 🟨 authService.node.ts
 │ ├── 🟨 authService.ts
+│ ├── 🟨 lessonClientService.ts
 │ ├── 🟨 lessonService.ts
+│ ├── 🟨 plannerClientService.ts
 │ ├── 🟨 plannerService.ts
+│ ├── 🟨 standardClientService.ts
 │ ├── 🟨 standardService.ts
+│ ├── 🟨 unitClientService.ts
 │ ├── 🟨 unitLessonService.ts
 │ ├── 🟨 unitService.ts
 ├── 📁 styles
@@ -202,7 +216,6 @@ models/
 │ ├── 🟨 validators.ts
 
 ```
-
 ## Core Features
 
 **Units**
