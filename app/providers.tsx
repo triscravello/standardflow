@@ -1,7 +1,7 @@
 "use client";
 
 import type { JSX, PropsWithChildren } from "react";
-import { AuthProvider } from "../context/authContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function Providers({ children }: PropsWithChildren): JSX.Element {
     return <AuthProvider>{children}</AuthProvider>;
