@@ -41,6 +41,6 @@ const standardSchema = new Schema<IStandard>(
 // Helpful query index
 standardSchema.index({ subject: 1, gradeLevel: 1 });
 
-const Standard = mongoose.model<IStandard>("Standard", standardSchema);
+const Standard = mongoose.models.Standard || mongoose.model<IStandard>("Standard", standardSchema);
 
 export default Standard;

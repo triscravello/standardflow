@@ -7,6 +7,7 @@ import {
   badRequest,
   internalServerError,
 } from "@/utils/apiErrors";
+import dbConnect from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,11 +34,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { code, description, subject, gradeLevel } = body;
 
-    if (!code || !description || !subject || !gradeLevel) {
+    if (!code || !description || !subject || !gradeLevel === undefined) {
       return badRequest("Code, description, subject, and gradeLevel are required");
     }
 
     const standard = await createStandard(body);
+    await dbConnect();
 
     return NextResponse.json(
       { success: true, data: standard },
@@ -47,6 +49,8 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return forbidden();
     }
-    return internalServerError();
+    console.error("POST /api/standards ERROR:", error);
+    if (error instanceof Error && error.message === "FORBIDDEN") return forbidden();
+    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }
