@@ -42,6 +42,9 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
     toPlannerByDay(initialEntries)
   );
   const [isSyncing, setIsSyncing] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [newLessonTitle, setNewLessonTitle] = useState("");
@@ -53,11 +56,13 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
 
   useEffect(() => {
     async function fetchPlanner() {
+      setError(null);
       try {
         const entries = await plannerService.user();
         setPlanner(toPlannerByDay(entries));
       } catch (error) {
         console.error("Error fetching planner user entries:", error);
+        setError("Failed to load planner entries. Please refresh and try again.");
       } finally {
         setIsSyncing(false);
       }
@@ -67,6 +72,8 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
   }, []);
 
   const openAddTaskModal = (day: string) => {
+    setError(null);
+    setSuccessMessage(null);
     setSelectedDay(day);
     setNewLessonTitle("");
     setIsAddModalOpen(true);
@@ -74,10 +81,14 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
 
   const addTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
 
     if (!selectedDay || !newLessonTitle.trim()) {
+      setError("Lesson title is required.")
       return;
     }
+    setIsSubmitting(true);
 
     const optimisticEntry: PlannerEntryDTO = {
       _id: `temp-${Date.now()}`,
@@ -95,6 +106,8 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
 
     setIsAddModalOpen(false);
     setNewLessonTitle("");
+    setSuccessMessage(`Added "${optimisticEntry.lesson.title}" to ${selectedDay}.`);
+    setIsSubmitting(false);
   };
 
   const deleteEntry = async (entryId: string) => {
@@ -118,8 +131,10 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
             ? "Syncing planner entries..."
             : hasPlannerEntries
               ? "Drag and drop lessons to organize your week!"
-              : "No planner entries yet this week."}
+              : "No planner entries."}
         </p>
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {successMessage && <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>}
 
         {isSyncing ? (
           <div className="flex justify-center py-6">
@@ -146,11 +161,11 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
         onClose={() => setIsAddModalOpen(false)}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsAddModalOpen(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" form="add-lesson-form" disabled={!newLessonTitle.trim()}>
-              Save Lesson
+            <Button type="submit" form="add-planner-form" disabled={!newLessonTitle.trim() || isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Lesson"}
             </Button>
           </>
         }
