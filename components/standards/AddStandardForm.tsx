@@ -15,10 +15,12 @@ export default function AddStandardForm({ onAddStandard }: AddStandardFormProps)
     const [gradeLevel, setGradeLevel] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError(null);
+        setSuccessMessage(null);
 
         const parsedGradeLevel = Number(gradeLevel);
 
@@ -41,6 +43,7 @@ export default function AddStandardForm({ onAddStandard }: AddStandardFormProps)
             setDescription('');
             setSubject('');
             setGradeLevel('');
+            setSuccessMessage('Standard added successfully.')
         } catch {
             setError('Unable to add standard. Please try again.');
         } finally {
@@ -95,6 +98,7 @@ export default function AddStandardForm({ onAddStandard }: AddStandardFormProps)
             </div>
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {successMessage && <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>}
 
             <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Adding...' : 'Add Standard'}

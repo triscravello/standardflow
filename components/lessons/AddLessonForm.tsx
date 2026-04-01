@@ -15,10 +15,12 @@ export default function AddLessonForm({ onAddLesson }: AddLessonFormProps) {
     const [materials, setMaterials] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError(null);
+        setSuccessMessage(null);
 
         if (!title.trim() || !standardId.trim()) {
             setError('Title and Standard ID are required');
@@ -48,6 +50,7 @@ export default function AddLessonForm({ onAddLesson }: AddLessonFormProps) {
             setStandardId('');
             setObjectives('');
             setMaterials('');
+            setSuccessMessage('Lesson added successfully.');
         } catch {
             setError('Unable to add lesson. Please try again.');
         } finally {
@@ -102,6 +105,7 @@ export default function AddLessonForm({ onAddLesson }: AddLessonFormProps) {
             </div>
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {successMessage && <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>}
 
             <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Adding...' : 'Add Lesson'}
