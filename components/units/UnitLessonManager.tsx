@@ -15,11 +15,13 @@ export default function UnitLessonManager({ unitId }: UnitLessonManagerProps) {
     const [selectedLessonId, setSelectedLessonId] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [updating, setUpdating] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
+        setSuccessMessage(null);
 
         try {
             const [lessons, assignedLessons] = await Promise.all([
@@ -63,10 +65,12 @@ export default function UnitLessonManager({ unitId }: UnitLessonManagerProps) {
 
         setUpdating(true);
         setError(null);
+        setSuccessMessage(null);
 
         try {
             await unitService.addLessonToUnit(unitId, selectedLessonId, unitLessons.length);
             await fetchData();
+            setSuccessMessage("Lesson added to the unit.")
         } catch {
             setError("Unable to add lesson to unit.");
         } finally {
@@ -78,10 +82,12 @@ export default function UnitLessonManager({ unitId }: UnitLessonManagerProps) {
         async (lessonId: string) => {
             setUpdating(true);
             setError(null);
+            setSuccessMessage(null);
 
             try {
                 await unitService.removeLessonFromUnit(unitId, lessonId);
                 await fetchData();
+                setSuccessMessage("Lesson removed from unit.")
             } catch {
                 setError("Unable to remove lesson from unit.");
             } finally {
@@ -100,6 +106,7 @@ export default function UnitLessonManager({ unitId }: UnitLessonManagerProps) {
             <h4 className="text-sm font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">Unit Lessons</h4>
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {successMessage && <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <select 
