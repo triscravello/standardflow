@@ -10,7 +10,7 @@ export default function UnitList({ units }: UnitListProps) {
     if (!units.length) {
         return (
             <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400">
-                No units found. Create a unit to start organizing lessons.
+                No units created.
             </div>
         )
     }
