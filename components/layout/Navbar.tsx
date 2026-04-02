@@ -32,7 +32,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-gray-800 text-white px-6 py-4 border-b border-gray-700">
+    <nav className="border-b border-slate-200 bg-white/95 px-6 py-4 text-slate-900 shadow-sm backdrop-blur">
       <div className="flex items-center justify-between">
         <ul className="flex flex-wrap items-center gap-6">
           {navLinks.map((link) => {
@@ -43,7 +43,7 @@ export default function Navbar() {
                 <Link
                   href={link.href}
                   className={`transition-colors ${
-                    isActive ? "text-yellow-400 font-semibold" : "hover:text-gray-300"
+                    isActive ? "font-semibold text-blue-700" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   {link.name}
@@ -55,14 +55,14 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           {user && (
-            <p className="text-sm text-gray-300">
-              {user.username} <span className="text-gray-400">({user.role})</span>
+            <p className="text-sm text-slate-600">
+              {user.username} <span className="text-slate-400">({user.role})</span>
             </p>
           )}
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-md border border-gray-500 px-3 py-1 text-sm font-medium hover:bg-gray-700"
+            className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
           >
             Logout
           </button>

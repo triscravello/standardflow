@@ -15,7 +15,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="bg-gray-100 w-64 min-h-screen p-6 border-r">
+    <aside className="w-64 min-h-screen border-r border-slate-200 bg-white/80 p-6">
       <nav>
         <ul className="space-y-2">
           {sidebarLinks.map((link) => {
@@ -27,8 +27,8 @@ export default function Sidebar() {
                   href={link.href}
                   className={`block px-4 py-2 rounded-md transition-colors ${
                     isActive
-                      ? "bg-gray-200 font-semibold text-gray-900"
-                      : "hover:bg-gray-200 text-gray-600"
+                      ? "bg-blue-50 font-semibold text-blue-800"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }`}
                 >
                   {link.name}

@@ -36,14 +36,14 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased text-slate-900`}
       >
         <Providers>
         <div className="flex flex-col h-screen">
           {isLoggedIn && <Navbar />}
           <div className="flex flex-1 overflow-hidden">
             {isLoggedIn && <Sidebar />}
-            <main className="flex-1 p-6 overflow-y-auto bg-white">{children}</main>
+            <main className="flex-1 overflow-y-auto p-6">{children}</main>
           </div>
         </div>
         </Providers>
