@@ -2,7 +2,7 @@
 @import 'tailwindcss';
 
 :root {
-    color-scheme: light dark;
+    color-scheme: light;
 }
 
 * {
@@ -17,8 +17,8 @@ html, body {
 
 body {
     min-height: 100vh;
-    background-color: var(--bg);
-    color: var(--text);
+    background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 100%);
+    color: #0f172a;
 }
 
 input, button, textarea, select {
