@@ -15,13 +15,13 @@ export default function DayColumn({ day, entries, onAddTask, onDeleteEntry }: Da
   return (
     <div className="planner-day-column">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold text-black dark:text-white">{day}</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{day}</h2>
         <Button onClick={() => onAddTask(day)} size="sm">
           Add Task
         </Button>
       </div>
       {entries.length > 0 ? (
-        <ul className="space-y-2 text-zinc-600 dark:text-zinc-400">
+        <ul className="space-y-2 text-slate-600">
           {entries.map((entry) => (
             <li key={entry._id} className="flex items-start gap-2">
               <LessonDraggable entry={entry} onDelete={onDeleteEntry} />
@@ -29,7 +29,7 @@ export default function DayColumn({ day, entries, onAddTask, onDeleteEntry }: Da
           ))}
         </ul>
       ) : (
-        <p className="text-zinc-400 dark:text-zinc-500">No lessons scheduled</p>
+        <p className="text-slate-400">No lessons scheduled</p>
       )}
     </div>
   );
