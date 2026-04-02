@@ -52,53 +52,53 @@ export default function AddStandardForm({ onAddStandard }: AddStandardFormProps)
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Add Standard</h2>
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-6">
+            <h2 className="text-lg font-semibold text-slate-900">Add Standard</h2>
 
             <div className="grid gap-4 sm:grid-cols-2">
-                <label className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                <label className="space-y-1 text-sm text-slate-700">
                     <span>Code</span>
                     <input
                         placeholder="CCSS.MATH.3.NF.A.1"
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
-                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                     />
                 </label>
 
-                <label className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                <label className="space-y-1 text-sm text-slate-700">
                     <span>Subject</span>
                     <input
                         placeholder="Mathematics"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
-                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                     />
                 </label>
 
-                <label className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                <label className="space-y-1 text-sm text-slate-700">
                     <span>Description</span>
                     <input
                         placeholder="Understand a fraction as a number on the number line."
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                     />
                 </label>
 
-                <label className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                <label className="space-y-1 text-sm text-slate-700">
                     <span>Grade Level</span>
                     <input
                         placeholder="3"
                         value={gradeLevel}
                         onChange={(e) => setGradeLevel(e.target.value)}
-                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
                     />
                 </label>
             </div>
 
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-            {successMessage && <p className="text-sm text-emerald-600 dark:text-emerald-400">{successMessage}</p>}
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            {successMessage && <p className="text-sm text-emerald-600">{successMessage}</p>}
 
             <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Adding...' : 'Add Standard'}
