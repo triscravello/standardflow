@@ -30,10 +30,10 @@ export default function LessonsPage() {
         void fetchLessons();
     }, [fetchLessons]);
 
-    const handleAddLesson = useCallback(async (lesson: Omit<LessonDTO, '_id'>) => {
+    const handleAddLesson = useCallback(async (lesson: any) => {
         const createdLesson = await lessonService.createLesson({
             title: lesson.title,
-            standardId: lesson.standard,
+            standardCode: lesson.standardCode,
             objectives: lesson.objectives,
             materials: lesson.materials,
         });
