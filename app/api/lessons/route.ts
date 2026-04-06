@@ -14,7 +14,21 @@ export async function POST(req: NextRequest) {
         requireRole(user, ['admin', 'teacher']);
             
         const data = await req.json();
-        const newLesson = await createLesson(user.id, data);
+        console.log("Incoming payload:", data);
+
+        // validate required fields
+        if (!data.title || !data.standardCode) {
+            return badRequest("Missing required fields: title or standard code");
+        }
+
+        // Create lesson - note user.id is passed separately
+        const newLesson = await createLesson(user.id, {
+            title: data.title,
+            standardCode: data.standardCode, // string code, e.g. "MA.912.DP.1.3"
+            objectives: data.objectives,
+            materials: data.materials,
+        });
+
         return NextResponse.json(newLesson, { status: 201 });
     } catch (error) {
         console.error("POST /api/lessons error:", error);

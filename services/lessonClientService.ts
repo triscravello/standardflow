@@ -2,14 +2,15 @@
 export interface LessonDTO {
     _id: string;
     title: string;
-    standard: string;
+    standard: string; // ObjectId
+    standardCode?: string; // populated Standard code
     objectives: string[];
     materials: string[];
 }
 
 export interface CreateLessonPayload {
     title: string;
-    standardId: string;
+    standardCode: string;
     objectives?: string[];
     materials?: string[];
 }
