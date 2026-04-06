@@ -2,6 +2,7 @@
 import Lesson, { ILesson } from '../models/Lesson';
 import PlannerEntry, { IPlannerEntry } from '../models/PlannerEntry';
 import { Types } from 'mongoose';
+import Standard from '@/models/Standard';
 
 export interface IPlannerEntryPopulated
   extends Omit<IPlannerEntry, 'lesson'> {
@@ -10,20 +11,27 @@ export interface IPlannerEntryPopulated
 
 export interface LessonData {
     title: string;
-    standardId: string;
+    standardCode: string; // <-- frontend sends the code string
     objectives?: string[];
     materials?: string[];
 }
 
 export async function createLesson(userId: string, lessonData: LessonData): Promise<ILesson> {
     try {
+        // lookup Standard by code
+        const standard = await Standard.findOne({ code: lessonData.standardCode });
+        if (!standard) {
+            throw new Error(`Standard with code ${lessonData.standardCode} not found`);
+        }
+
         const lesson = new Lesson({
             title: lessonData.title, 
-            standard: lessonData.standardId,
+            standard: standard._id, // <-- store ObjectId
             objectives: lessonData.objectives || [],
             materials: lessonData.materials || [],
             createdBy: userId,
         });
+
         return await lesson.save();
     } catch (error) {
         throw new Error('Error creating lesson: ' + error);
@@ -46,7 +54,21 @@ export async function getLessonById(userId: string, lessonId: string): Promise<I
 
 export async function getLessonByUser(userId: string): Promise<ILesson[]> {
     try {
-        return await Lesson.find({ createdBy: userId }).sort({ createdAt: -1 })
+        const lessons = await Lesson.find({ createdBy: userId })
+            .populate<{ standard: { code: string } }>({
+                path: 'standard',
+                select: 'code', // only fetch the code field
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+        return lessons.map((lesson) => ({
+            _id: lesson._id.toString(),
+            title: lesson.title,
+            standard: lesson.standard._id.toString(),
+            standardCode: lesson.standard.code,
+            objectives: lesson.objectives,
+            materials: lesson.materials,
+        }))
     } catch (error) {
         throw new Error('Error retrieving lessons: ' + error);
     }
@@ -87,15 +109,25 @@ export async function getScheduledLessonsForUser(
     endDate: Date,
 ): Promise<IPlannerEntryPopulated[]> {
     try {
-        return await PlannerEntry.find({
+        const scheduled = await PlannerEntry.find({
             user: new Types.ObjectId(userId),
             date: { $gte: startDate, $lte: endDate },
         })
-        .populate<{ lesson: ILesson }>({
+        .populate<{ lesson: ILesson & { standard: { code: string } } }>({
             path: 'lesson',
             match: { createdBy: userId },
+            populate: { path: 'standard', select: 'code' },
         })
         .lean<IPlannerEntryPopulated[]>();
+
+        // Add standardCode to each lesson
+        return scheduled.map(entry => ({
+            ...entry,
+            lesson: {
+                ...entry.lesson,
+                standardCode: entry.lesson.standard,
+            }
+        }));
     } catch (error) {
         throw new Error('Error retrieving scheduled lessons for user: ' + error);
     }
@@ -125,14 +157,18 @@ export async function updateLesson(
     data: Partial<LessonData>
 ): Promise<ILesson | null> {
     try {
+        const update: any = {};
+        if (data.title) update.title = data.title;
+        if (data.standardCode) {
+            const standard = await Standard.findOne({ code: data.standardCode });
+            if (!standard) throw new Error(`Standard with code ${data.standardCode} not found`);
+            update.standard = standard._id;
+        }
+        if (data.objectives) update.objectives = data.objectives;
+        if (data.materials) update.materials = data.materials;
         const updatedLesson = await Lesson.findOneAndUpdate(
             { _id: lessonId, createdBy: userId },
-            {
-                ...(data.title && { title: data.title }),
-                ...(data.standardId && { standard: data.standardId }), 
-                ...(data.objectives && { objectives: data.objectives }),
-                ...(data.materials && { materials: data.materials }),
-            }, 
+            update,
             { new: true }
         ).lean();
         
