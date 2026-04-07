@@ -8,21 +8,30 @@ function toDefaultUsername(email: string) {
     return email.trim().toLowerCase();
 } // Simple username generator based on email
 
+function isValidRole(role: unknown): role is 'admin' | 'teacher' | 'viewer' {
+    return role === 'admin' || role === 'teacher' || role === 'viewer';
+}
+
 export async function POST(request: NextRequest) {
     try {
         await connectDB();
 
-        const { email, password } = await request.json() as {
+        const { email, password, role } = await request.json() as {
             email?: string;
             password?: string;
+            role?: unknown;
         };
 
         if (!email || !password) {
-            return badRequest("Email and password are required");
+            return badRequest("Email and password are required.");
+        }
+
+        if (!isValidRole(role)) {
+            return badRequest("Role must be one of admin, teacher, or viewer");
         }
 
         const username = toDefaultUsername(email);
-        const user = await registerUser(username, email, password);
+        const user = await registerUser(username, email, password, role);
 
         const token = await authenticateUser(email, password);
 
