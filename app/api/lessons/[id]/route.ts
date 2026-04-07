@@ -1,8 +1,9 @@
 // /app/api/lessons/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getLessonById, scheduleLessonForUser, cancelScheduledLesson} from "@/services/lessonService";
+import { getLessonById, updateLesson, deleteLesson} from "@/services/lessonService";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { unauthorized, forbidden, internalServerError, badRequest } from "@/utils/apiErrors";
+import { connectDB } from "@/lib/mongodb";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
     try {
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         requireRole(user, ['admin', 'teacher']);
     
         const { id } = params;
+        await connectDB();
         const lesson = await getLessonById(user.id, params.id);
         return NextResponse.json(lesson);
     } catch (error) {
@@ -35,9 +37,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     
         const { id } = params;
         const data = await req.json();
-    
-        const scheduledLesson = await scheduleLessonForUser(user.id, id, new Date(data.date));
-        return NextResponse.json(scheduledLesson);
+
+        await connectDB();
+        const updatedLesson = await updateLesson(user.id, id, data);
+        return NextResponse.json(updatedLesson);
     } catch (error) {
         if (error instanceof Error && error.message === "FORBIDDEN") {
             return forbidden();
@@ -57,20 +60,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
         const { id } = params;
 
-        const { searchParams } = new URL(req.url);
-        const dateParam = searchParams.get("date");
-
-        if (!dateParam) {
-            return badRequest("date query parameter is required");
-        }
-
-        const date = new Date(dateParam);
-        if (isNaN(date.getTime())) {
-            return badRequest("Invalid date format");
-        }
-
-        await cancelScheduledLesson(user.id, params.id, date);
-        return NextResponse.json({ message: 'Scheduled lesson canceled successfully' });
+        if (!id) return badRequest("Lesson id is required");
+        await connectDB();
+        await deleteLesson(user.id, id);
+        return NextResponse.json({ message: 'Lesson deleted successfully.' });
     } catch (error) {
         if (error instanceof Error && error.message === "FORBIDDEN") {
             return forbidden();
