@@ -58,19 +58,19 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/planner/week
-// body: { lessonTitle, date }
+// body: { lessonId, date }
 export async function POST(req: NextRequest) {
   try {
     const user = await authTeacherOrAdmin(req);
 
-    const { lessonTitle, date } = await req.json();
-    if (!lessonTitle || !date) return badRequest("Missing lessonTitle or date");
+    const { lessonId, date } = await req.json();
+    if (!lessonId || !date) return badRequest("Missing lessonId or date");
 
     const lessonDate = new Date(date);
     if (isNaN(lessonDate.getTime())) return badRequest("Invalid date");
 
     await connectDB();
-    const plannerEntry = await addPlannerEntry(user.id, lessonTitle, lessonDate);
+    const plannerEntry = await addPlannerEntry(user.id, lessonId, lessonDate);
 
     return NextResponse.json(sanitizeEntry(plannerEntry));
   } catch (error: any) {
@@ -124,6 +124,7 @@ export async function PUT(req: NextRequest) {
 
     await connectDB();
     const updatedEntry = await reschedulePlannerEntry(entryId, dateObj);
+    if(!updatedEntry) return badRequest("Planner entry not found");
 
     return NextResponse.json(sanitizeEntry(updatedEntry));
   } catch (error: any) {
