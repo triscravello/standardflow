@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { getStandardById, deleteStandard, updateStandard } from "@/services/standardService";
 import { badRequest, forbidden, internalServerError } from "@/utils/apiErrors";
+import dbConnect from "@/lib/db";
 
 // This API route handles GET requests to fetch a specific standard by ID
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
         // Authorize based on role
         requireRole(user, ["admin", "teacher", "viewer"]);
+
+        await dbConnect();
 
         const standard = await getStandardById(params.id);
 
@@ -35,9 +38,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         const body = await req.json();
         const { code, description, subject, gradeLevel } = body;
         
-        if (!code || !description || !subject || !gradeLevel == null) {
+        if (!code || !description || !subject || gradeLevel == null) {
             return badRequest("code, description, subject, and gradeLevel are required")
         }
+
+        await dbConnect();
         
         const standard = await updateStandard(params.id, body);
         
@@ -57,6 +62,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
         // Authorize based on role
         requireRole(user, ['admin']); // ADMIN ONLY
+
+        await dbConnect();
         
         await deleteStandard(params.id);
         

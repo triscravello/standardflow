@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const user = await requireAuth(req);
 
     requireRole(user, ["admin", "teacher", "viewer"]);
+    await dbConnect();
 
     const standards = await getStandards();
     return NextResponse.json({ success: true, data: standards });
@@ -34,12 +35,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { code, description, subject, gradeLevel } = body;
 
-    if (!code || !description || !subject || !gradeLevel === undefined) {
+    if (!code || !description || !subject || gradeLevel === undefined) {
       return badRequest("Code, description, subject, and gradeLevel are required");
     }
 
-    const standard = await createStandard(body);
     await dbConnect();
+    const standard = await createStandard(body);
 
     return NextResponse.json(
       { success: true, data: standard },
