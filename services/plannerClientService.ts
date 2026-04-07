@@ -34,5 +34,43 @@ export const plannerService = {
         });
 
         return parseJson<PlannerEntryDTO[]>(res);
+    },
+
+    async create(lessonId: string, date: string): Promise<PlannerEntryDTO> {
+        const res = await fetch('/api/planner/week', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ lessonId, date }),
+        });
+
+        return parseJson<PlannerEntryDTO>(res);
+    },
+
+    async remove(entryId: string): Promise<void> {
+        const res = await fetch(`/api/planner/week?entryId=${encodeURIComponent(entryId)}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        await parseJson<{ message: string }>(res);
+    },
+
+    async reschedule(entryId: string, newDate: string): Promise<PlannerEntryDTO> {
+        const res = await fetch('/api/planner/week', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ entryId, newDate }),
+        });
+
+        return parseJson<PlannerEntryDTO>(res);
     }
 };

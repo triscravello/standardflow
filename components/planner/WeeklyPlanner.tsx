@@ -6,9 +6,11 @@ import {
   plannerService,
   PlannerEntryDTO,
 } from "@/services/plannerClientService";
+import { lessonService, LessonDTO } from "@/services/lessonClientService";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
 import LoadingSpinner from "../common/LoadingSpinner";
+import Link from "next/link";
 
 const daysOfWeek = [
   "Monday",
@@ -47,7 +49,9 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [newLessonTitle, setNewLessonTitle] = useState("");
+  const [selectedLessonId, setSelectedLessonId] = useState("");
+  const [lessons, setLessons] = useState<LessonDTO[]>([]);
+  const [activeDragEntryId, setActiveDragEntryId] = useState<string | null>(null);
 
   const hasPlannerEntries = useMemo(
     () => Object.values(planner).some((entries) => entries.length > 0),
@@ -60,6 +64,9 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
       try {
         const entries = await plannerService.user();
         setPlanner(toPlannerByDay(entries));
+
+        const lessonOptions = await lessonService.getLessons();
+        setLessons(lessonOptions);
       } catch (error) {
         console.error("Error fetching planner user entries:", error);
         setError("Failed to load planner entries. Please refresh and try again.");
@@ -75,49 +82,90 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
     setError(null);
     setSuccessMessage(null);
     setSelectedDay(day);
-    setNewLessonTitle("");
+    setSelectedLessonId("");
     setIsAddModalOpen(true);
   };
+
+  const toDateForDay = (day: string) => {
+    const today = new Date();
+    const dayIndex = daysOfWeek.indexOf(day);
+    const mondayBasedIndex = (today.getDay() + 6) % 7;
+    const diff = dayIndex - mondayBasedIndex;
+    const target = new Date(today);
+    target.setDate(today.getDate() + diff);
+    target.setHours(9, 0, 0, 0);
+    return target;
+  }
 
   const addTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setSuccessMessage(null);
 
-    if (!selectedDay || !newLessonTitle.trim()) {
-      setError("Lesson title is required.")
+    if (!selectedDay || !selectedLessonId) {
+      setError("Please select a lesson.")
       return;
     }
     setIsSubmitting(true);
 
-    const optimisticEntry: PlannerEntryDTO = {
-      _id: `temp-${Date.now()}`,
-      lesson: {
-        _id: "tmp-lesson",
-        title: newLessonTitle.trim(),
-      },
-      date: new Date().toISOString(),
-    };
+    try {
+      const targetDate = toDateForDay(selectedDay).toISOString();
+      const createdEntry = await plannerService.create(selectedLessonId, targetDate);
 
-    setPlanner((prev) => ({
-      ...prev,
-      [selectedDay]: [...(prev[selectedDay] || []), optimisticEntry],
-    }));
+      setPlanner((prev) => ({
+        ...prev,
+        [selectedDay]: [...(prev[selectedDay] || []), createdEntry]
+      }));
 
-    setIsAddModalOpen(false);
-    setNewLessonTitle("");
-    setSuccessMessage(`Added "${optimisticEntry.lesson.title}" to ${selectedDay}.`);
-    setIsSubmitting(false);
+      setIsAddModalOpen(false);
+      setSelectedLessonId("");
+      setSuccessMessage(`Added "${createdEntry.lesson.title} to ${selectedDay}`);
+    } catch (addError) {
+      console.error("Error adding planner entry:", addError);
+      setError("Failed to add planner entry.")
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const deleteEntry = async (entryId: string) => {
-    setPlanner((prev) => {
-      const next: Record<string, PlannerEntryDTO[]> = {};
-      for (const day of daysOfWeek) {
-        next[day] = prev[day].filter((entry) => entry._id !== entryId);
-      }
-      return next;
-    });
+    try {
+      await plannerService.remove(entryId);
+      setPlanner((prev) => {
+        const next: Record<string, PlannerEntryDTO[]> = {};
+        for (const day of daysOfWeek) {
+          next[day] = prev[day].filter((entry) => entry._id !== entry._id);
+        }
+        return next;
+      })
+    } catch (deleteError) {
+      console.error("Error deleting planner entry:", deleteEntry);
+      setError("Failed to delete planner entry.");
+    }
+  };
+
+  const handleDropEntry = async (day: string) => {
+    if (!activeDragEntryId) return;
+
+    try {
+      const newDate = toDateForDay(day).toISOString();
+      const updatedEntry = await plannerService.reschedule(activeDragEntryId, newDate);
+
+      setPlanner((prev) => {
+        const next = toPlannerByDay(
+          Object.values(prev)
+            .flat()
+            .map((entry) => (entry._id === activeDragEntryId ? updatedEntry : entry))
+        );
+        return next;
+      });
+      setSuccessMessage(`Moved "${updatedEntry.lesson.title} to ${day}.`);
+    } catch (dropError) {
+      console.error("Error reordering planner entry:", dropError);
+      setError("Failed to move planner entry.");
+    } finally {
+      setActiveDragEntryId(null);
+    }
   };
 
   return (
@@ -135,6 +183,10 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
         </p>
         {error && <p className="text-sm text-red-600">{error}</p>}
         {successMessage && <p className="text-sm text-emerald-600">{successMessage}</p>}
+        <div className="mb-3 flex gap=2">
+          <Link href="/lessons"><Button size="sm" variant="secondary">Add Lesson</Button></Link>
+          <Link href="/units"><Button size="sm" variant="secondary">Add Unit</Button></Link>
+        </div>
 
         {isSyncing ? (
           <div className="flex justify-center py-6">
@@ -149,6 +201,8 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
                 entries={planner[day] || []}
                 onAddTask={openAddTaskModal}
                 onDeleteEntry={deleteEntry}
+                onDropEntry={handleDropEntry}
+                onDragEntryStart={setActiveDragEntryId}
               />
             ))}
           </div>
@@ -164,7 +218,7 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
             <Button variant="secondary" onClick={() => setIsAddModalOpen(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" form="add-planner-lesson-form" disabled={!newLessonTitle.trim() || isSubmitting}>
+            <Button type="submit" form="add-planner-lesson-form" disabled={!selectedLessonId || isSubmitting}>
               {isSubmitting ? "Saving..." : "Save Lesson"}
             </Button>
           </>
@@ -172,15 +226,21 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
       >
         <form id="add-planner-lesson-form" onSubmit={addTask} className="space-y-2">
           <label className="block text-sm font-medium text-slate-700" htmlFor="planner-lesson-title">
-            Lesson title
+            Select lesson
           </label>
-          <input
+          <select
             id="planner-lesson-title"
-            value={newLessonTitle}
-            onChange={(event) => setNewLessonTitle(event.target.value)}
+            value={selectedLessonId}
+            onChange={(event) => setSelectedLessonId(event.target.value)}
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
-            placeholder="Ex: Intro to Fractions"
-          />
+          >
+            <option value="">Choose a lesson</option>
+            {lessons.map((lesson) => (
+              <option key={lesson._id} value={lesson._id}>
+                {lesson.title}
+              </option>
+            ))}
+          </select>
         </form>
       </Modal>
     </div>
