@@ -45,6 +45,7 @@ const lessonSchema = new Schema<ILesson>(
 // Helpful index
 lessonSchema.index({ standard: 1 });
 
-const Lesson = (models.Lesson as mongoose.Model<ILesson>) || model<ILesson>("Lesson", lessonSchema);
+// Hot reload safe model registration
+const Lesson = models.Lesson || model<ILesson>("Lesson", lessonSchema);
 
 export default Lesson;

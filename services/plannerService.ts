@@ -1,162 +1,151 @@
 // services/plannerService.ts
-import PlannerEntry, { IPlannerEntry } from '../models/PlannerEntry';
-import Lesson, { ILesson } from '../models/Lesson';
-import { Types } from 'mongoose';
+import PlannerEntry, { IPlannerEntry } from "../models/PlannerEntry";
+import '../models/Lesson';
+import type { ILesson } from "../models/Lesson";
+import { Types } from "mongoose";
 
-export interface IPlannerEntryPopulated extends Omit<IPlannerEntry, 'lesson'> {
-    lesson: ILesson;
+// Type returned to frontend after sanitization
+export interface IPlannerEntryPopulated extends Omit<IPlannerEntry, "lesson"> {
+  lesson: ILesson;
 }
 
+// Helper: sanitize DB entry for frontend
+function sanitizeEntry(entry: IPlannerEntryPopulated): IPlannerEntryPopulated {
+  return {
+    ...entry,
+    _id: entry._id.toString(),
+    lesson: {
+      ...entry.lesson,
+      _id: entry.lesson._id.toString(),
+    },
+    date: entry.date.toISOString(),
+    createdAt: entry.createdAt?.toISOString(),
+    updatedAt: entry.updatedAt?.toISOString(),
+    user: entry.user?.toString(),
+  } as IPlannerEntryPopulated;
+}
+
+// Fetch all planner entries for a user
 export async function getUserPlannerEntries(
-    userId: string
+  userId: string
 ): Promise<IPlannerEntryPopulated[]> {
-    try {
-        return await PlannerEntry.find({ user: new Types.ObjectId(userId) })
-            .populate<{ lesson: ILesson }>('lesson')
-            .lean<IPlannerEntryPopulated[]>();
-    } catch (error) {
-        throw new Error('Error retrieving planner entries: ' + error);
-    }
+  if (!Types.ObjectId.isValid(userId)) throw new Error("Invalid userId");
+
+  const raw = await PlannerEntry.find({ user: new Types.ObjectId(userId) })
+    .populate<{ lesson: ILesson }>("lesson")
+    .lean<IPlannerEntryPopulated[]>();
+
+  // Sanitize before returning
+  return raw.map(sanitizeEntry);
 }
 
-export async function removePlannerEntry(
-    entryId: string
-): Promise<void> {
-    try {
-        await PlannerEntry.findByIdAndDelete(entryId).exec();
-    } catch (error) {
-        throw new Error('Error removing planner entry: ' + error);
-    }
-}
-
-export async function getPlannerEntryById(
-    entryId: string
-): Promise<IPlannerEntryPopulated | null> {
-    try {
-        return await PlannerEntry.findById(entryId)
-            .populate<{ lesson: ILesson }>('lesson')
-            .lean<IPlannerEntryPopulated | null>();
-    } catch (error) {
-        throw new Error('Error retrieving planner entry by ID: ' + error);
-    }
-}
-
-export async function reschedulePlannerEntry(
-    entryId: string,
-    newDate: Date
-): Promise<IPlannerEntry | null> {
-    try {
-        return await PlannerEntry.findByIdAndUpdate(
-            entryId,
-            { date: newDate },
-            { new: true }
-        ).lean();
-    } catch (error) {
-        throw new Error('Error rescheduling planner entry: ' + error);
-    }
-}
-
-export async function getLessonsScheduledOnDate(
-    userId: string,
-    date: Date
-): Promise<IPlannerEntryPopulated[]> {
-    try {
-        const startOfDay = new Date(date);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        return await PlannerEntry.find({
-            user: new Types.ObjectId(userId),
-            date: { $gte: startOfDay, $lte: endOfDay },
-        })
-        .populate<{ lesson: ILesson }>('lesson')
-        .lean<IPlannerEntryPopulated[]>();
-    } catch (error) {
-        throw new Error('Error retrieving lessons scheduled on date: ' + error);
-    }
-}
-
+// Add a planner entry
 export async function addPlannerEntry(
-    userId: string,
-    lessonId: string,
-    date: Date
+  userId: string,
+  lessonId: string,
+  date: Date
 ): Promise<IPlannerEntry> {
-    try {
-        const plannerEntry = new PlannerEntry({
-            user: new Types.ObjectId(userId),
-            lesson: new Types.ObjectId(lessonId),
-            date,
-        });
-        return await plannerEntry.save();
-    } catch (error) {
-        if (
-            error instanceof Error &&
-            (error as any).code === 11000 // Duplicate key error
-        ) {
-            throw new Error('Lesson already scheduled for this user on the specified date');
-        }
-        throw new Error('Error adding planner entry: ' + error);
+  const entry = new PlannerEntry({
+    user: new Types.ObjectId(userId),
+    lesson: new Types.ObjectId(lessonId),
+    date,
+  });
+
+  try {
+    return await entry.save();
+  } catch (err: any) {
+    if (err.code === 11000) {
+      throw new Error(
+        "Lesson already scheduled for this user on the specified date"
+      );
     }
+    throw err;
+  }
 }
 
-export async function getAllPlannerEntries(): Promise<IPlannerEntryPopulated[]> {
-    try {
-        return await PlannerEntry.find()
-            .populate<{ lesson: ILesson }>('lesson')
-            .lean<IPlannerEntryPopulated[]>();
-    } catch (error) {
-        throw new Error('Error retrieving all planner entries: ' + error);
-    }
+// Remove planner entry
+export async function removePlannerEntry(entryId: string): Promise<void> {
+  await PlannerEntry.findByIdAndDelete(entryId).exec();
 }
 
-export async function clearUserPlanner(
-    userId: string
-): Promise<void> {
-    try {
-        await PlannerEntry.deleteMany({ user: new Types.ObjectId(userId) }).exec();
-    } catch (error) {
-        throw new Error('Error clearing user planner: ' + error);
-    }
+// Get planner entry by ID
+export async function getPlannerEntryById(
+  entryId: string
+): Promise<IPlannerEntryPopulated | null> {
+  const raw = await PlannerEntry.findById(entryId)
+    .populate<{ lesson: ILesson }>("lesson")
+    .lean<IPlannerEntryPopulated | null>();
+  return raw ? sanitizeEntry(raw) : null;
 }
 
+// Reschedule planner entry
+export async function reschedulePlannerEntry(
+  entryId: string,
+  newDate: Date
+): Promise<IPlannerEntry | null> {
+  return PlannerEntry.findByIdAndUpdate(entryId, { date: newDate }, { new: true })
+    .lean()
+    .exec();
+}
+
+// Get lessons for a single day
+export async function getLessonsScheduledOnDate(
+  userId: string,
+  date: Date
+): Promise<IPlannerEntryPopulated[]> {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+
+  const raw = await PlannerEntry.find({
+    user: new Types.ObjectId(userId),
+    date: { $gte: start, $lte: end },
+  })
+    .populate<{ lesson: ILesson }>("lesson")
+    .lean<IPlannerEntryPopulated[]>();
+
+  return raw.map(sanitizeEntry);
+}
+
+// Get entries for a week
 export async function getPlannerEntriesForWeek(
-    userId: string,
-    startDate: Date,
-    endDate: Date
+  userId: string,
+  startDate: Date,
+  endDate: Date
 ): Promise<IPlannerEntryPopulated[]> {
-    if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid userId');
-    if (!(startDate instanceof Date) || isNaN(startDate.getTime())) throw new Error('Invalid start date');
-    if (!(endDate instanceof Date) || isNaN(endDate.getTime())) throw new Error('Invalid end date');
+  const raw = await PlannerEntry.find({
+    user: new Types.ObjectId(userId),
+    date: { $gte: startDate, $lte: endDate },
+  })
+    .populate<{ lesson: ILesson }>("lesson")
+    .lean<IPlannerEntryPopulated[]>();
 
-    return await PlannerEntry.find({
-        user: new Types.ObjectId(userId),
-        date: { $gte: startDate, $lte: endDate },
-    })
-        .populate<{ lesson: ILesson }>('lesson')
-        .lean<IPlannerEntryPopulated[]>();
+  return raw.map(sanitizeEntry);
 }
 
+// Get lessons for a specific unit in a week
 export async function getUnitLessonsForWeek(
-    userId: string,
-    unitId: string,
-    startDate: Date,
-    endDate: Date
+  userId: string,
+  unitId: string,
+  startDate: Date,
+  endDate: Date
 ): Promise<IPlannerEntryPopulated[]> {
-    if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid userId');
-    if (!Types.ObjectId.isValid(unitId)) throw new Error('Invalid unitId');
-    if (!(startDate instanceof Date) || isNaN(startDate.getTime())) throw new Error('Invalid start date');
-    if (!(endDate instanceof Date) || isNaN(endDate.getTime())) throw new Error('Invalid end date');
-
-    return await PlannerEntry.find({
-        user: new Types.ObjectId(userId),
-        date: { $gte: startDate, $lte: endDate }
+  const raw = await PlannerEntry.find({
+    user: new Types.ObjectId(userId),
+    date: { $gte: startDate, $lte: endDate },
+  })
+    .populate<{ lesson: ILesson }>({
+      path: "lesson",
+      match: { unit: new Types.ObjectId(unitId) },
     })
-        .populate<{ lesson: ILesson }>({
-            path: "lesson",
-            match: { unit: new Types.ObjectId(unitId) }, // Only lessons in this requested unit
-        })
-        .lean<IPlannerEntryPopulated[]>()
-        .then(entries => entries.filter(e => e.lesson)); // Remove entries where lessons didn't match
+    .lean<IPlannerEntryPopulated[]>();
+
+  // Filter out entries where lesson didn't match
+  return raw.filter((e) => e.lesson).map(sanitizeEntry);
+}
+
+// Clear all planner entries for a user
+export async function clearUserPlanner(userId: string): Promise<void> {
+  await PlannerEntry.deleteMany({ user: new Types.ObjectId(userId) }).exec();
 }

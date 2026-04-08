@@ -36,6 +36,7 @@ plannerEntrySchema.index(
   { unique: true }
 );
 
-const PlannerEntry = (models.PlannerEntry as mongoose.Model<IPlannerEntry>) || model<IPlannerEntry>("PlannerEntry", plannerEntrySchema);
+// Hot reload safe model registation
+const PlannerEntry = models.PlannerEntry || model<IPlannerEntry>("PlannerEntry", plannerEntrySchema);
 
 export default PlannerEntry;
