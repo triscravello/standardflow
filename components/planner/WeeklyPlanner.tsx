@@ -22,7 +22,7 @@ const daysOfWeek = [
   "Sunday",
 ];
 
-function toPlannerByDay(entries: PlannerEntryDTO[]) {
+function toPlannerByDay(entries: PlannerEntryDTO[] = []) {
   const grouped: Record<string, PlannerEntryDTO[]> = {};
 
   for (const day of daysOfWeek) {
@@ -63,7 +63,10 @@ export default function WeeklyPlanner({ initialEntries = [] }: { initialEntries?
       setError(null);
       try {
         const entries = await plannerService.user();
-        setPlanner(toPlannerByDay(entries));
+
+        // Ensure entries is always an array
+        const entriesArray: PlannerEntryDTO[] = Array.isArray(entries) ? entries : [];
+        setPlanner(toPlannerByDay(entriesArray));
 
         const lessonOptions = await lessonService.getLessons();
         setLessons(lessonOptions);
